@@ -1,0 +1,7 @@
+server.log
+train_model.py
+simulate_traffic.py
+kafka_producer.py
+.agents
+.vscode
+__pycache__
