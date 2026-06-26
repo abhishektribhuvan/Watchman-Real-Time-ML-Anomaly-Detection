@@ -1,6 +1,0 @@
-docker build -t abhishektribhuvan8/aiops-engine:latest .
-docker push abhishektribhuvan8/aiops-engine:latest
-// for ec2
-
-docker-compose pull
-docker-compose up -d
