@@ -1,2 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and Local tools
+.vscode/
+.agents/
+cmd.txt
+
+# Logs
+*.log
 server.log
-model.pkl
+
+# Machine Learning models and generated data
+*.pkl
+ml/model.pkl
+
+# Environment variables & virtual environments
+.env
+venv/
+env/
