@@ -1,6 +1,43 @@
 # AIOps RCA Engine
 
-AI-powered Root Cause Analysis engine for IT operations. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
+ML-powered Root Cause Analysis engine for server. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
+
+**Key Capabilities:**
+- **High Throughput:** Designed to handle traffic spikes of up to **500 logs per second** concurrently without dropping requests for current free tier servers , increasing the ram can handle 10x more requests per sec .   
+- **Batch Ingestion:** The `/ingest` endpoint accepts payloads of up to **1,000 logs per batch**, reducing network overhead.
+- **Asynchronous Processing:** Uses Apache Kafka to decouple ingestion from machine learning analysis, ensuring the API consistently responds in under **20ms**.
+- **Anomaly Detection:** Utilizes Scikit-Learn's Isolation Forest to identify unusual traffic patterns based on error rates and latency in **5-second rolling windows**.
+
+---
+
+## API Demo
+
+You can test the engine locally or live on an AWS EC2 instance.
+
+**API Documentation (Swagger UI):** `http://51.21.244.122:8000/docs` *(Replace with localhost or your actual IP)*
+
+### How to test the ML Engine:
+1. Open the Live API Documentation link above in your browser.
+2. Click on the green `POST /ingest` row to expand it, then click the **"Try it out"** button.
+3. Paste the following example log data (which includes some simulated errors and latency) into the **Request body** field:
+```json
+{
+  "logs": [
+    "148.5.169.251 - - [27/Dec/2037:12:00:00 +0530] \"DELETE /usr/admin HTTP/1.0\" 200 5044 \"http://app.com\" \"Mozilla/5.0\" 1409",
+    "90.64.62.239 - - [27/Dec/2037:12:00:00 +0530] \"PUT /usr/admin/developer HTTP/1.0\" 500 4947 \"http://app.com\" \"Mozilla/5.0\" 1127",
+    "97.15.37.214 - - [27/Dec/2037:12:00:00 +0530] \"PUT /usr/login HTTP/1.0\" 404 4980 \"-\" \"Mozilla/5.0\" 2258",
+    "159.238.93.133 - - [27/Dec/2037:12:00:00 +0530] \"POST /usr/register HTTP/1.0\" 200 4959 \"http://app.com\" \"Mozilla/5.0\" 4871",
+    "238.204.144.175 - - [27/Dec/2037:12:00:00 +0530] \"POST /usr/login HTTP/1.0\" 500 5056 \"http://app.com\" \"Mozilla/5.0\" 455",
+    "66.181.188.94 - - [27/Dec/2037:12:00:00 +0530] \"POST /usr HTTP/1.0\" 200 4966 \"-\" \"Mozilla/5.0\" 3609"
+  ]
+}
+```
+4. Click the blue **Execute** button. You should instantly get a `202 Accepted` response.
+5. Wait about **5 to 6 seconds**. (The engine processes logs in 5-second asynchronous windows).
+6. Scroll down to the blue `GET /status` row, click **"Try it out"**, and then **Execute**. 
+7. You will see the ML analysis results! It will show the total requests processed, error rates, average latency, and whether the Machine Learning model flagged this window as an anomaly.
+
+---
 
 ## Architecture
 

@@ -9,12 +9,18 @@ __pycache__/
 # Logs (too large for git)
 server.log
 *.log
+my-key.pem
+deploy.sh
 
 # Machine Learning model (deploy via scp/deploy.sh)
 ml/model.pkl
 *.pkl
 
-# Environment variables & virtual environments
+# Security / Secrets
+*.pem
+*.key
 .env
+
+# Virtual environments
 venv/
 env/
