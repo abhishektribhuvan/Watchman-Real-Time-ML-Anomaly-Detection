@@ -1,3 +1,5 @@
+"""ML analysis engine — scores a window of logs for anomalies."""
+
 from datetime import datetime
 
 import numpy as np
@@ -5,47 +7,43 @@ import numpy as np
 from app.schemas import WindowReport
 from app.utils import parse_log_line
 
-def analyze_window(logs_window: list[str], model, window_id: int) -> WindowReport:
-    """Analyze one window of logs and return a status report."""
+
+def analyze_window(logs: list[str], model, window_id: int) -> WindowReport:
+    """Analyze one 5-second window of logs and return a health report."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    total_logs = len(logs_window)
 
-    if total_logs == 0:
-        return WindowReport(
-            window_id=window_id,
-            window_time=now,
-            total_requests=0,
-            status="IDLE",
-        )
+    if not logs:
+        return WindowReport(window_id=window_id, window_time=now, status="IDLE")
 
-    error_5xx, error_4xx = 0, 0
+    # Parse all logs and extract metrics
+    error_5xx = 0
+    error_4xx = 0
     latencies: list[int] = []
 
-    for line in logs_window:
+    for line in logs:
         status, latency = parse_log_line(line)
         if status is None:
             continue
-
         if 500 <= status < 600:
             error_5xx += 1
         elif 400 <= status < 500:
             error_4xx += 1
         latencies.append(latency)
 
+    total = len(logs)
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
-    sorted_latencies = sorted(latencies)
-    p99_index = max(int(len(sorted_latencies) * 0.99) - 1, 0)
-    p99_latency = sorted_latencies[p99_index] if sorted_latencies else 0
-    max_latency = max(latencies) if latencies else 0
-    error_rate = error_5xx / total_logs if total_logs > 0 else 0.0
+    error_rate = error_5xx / total if total > 0 else 0.0
 
-    vector = np.array([[total_logs, error_5xx, error_4xx, avg_latency]])
-    prediction = model.predict(vector)[0]
-    score = model.score_samples(vector)[0]
+    # P99 latency
+    sorted_lat = sorted(latencies)
+    p99 = sorted_lat[max(int(len(sorted_lat) * 0.99) - 1, 0)] if sorted_lat else 0
 
-    confidence = min(max((-score - 0.3) / 0.3, 0.0), 1.0)
+    # ML prediction
+    features = np.array([[total, error_5xx, error_4xx, avg_latency]])
+    prediction = model.predict(features)[0]
     is_anomaly = prediction == -1
 
+    # Determine status
     if is_anomaly and error_rate > 0.3:
         status_label = "CRITICAL"
     elif is_anomaly:
@@ -53,28 +51,27 @@ def analyze_window(logs_window: list[str], model, window_id: int) -> WindowRepor
     else:
         status_label = "HEALTHY"
 
-    anomaly_reasons = []
+    # Build human-readable reasons (only when anomaly detected)
+    reasons = []
     if is_anomaly:
         if error_rate > 0.1:
-            anomaly_reasons.append(f"High 5xx error rate: {error_rate:.1%}")
+            reasons.append(f"High error rate ({error_rate:.0%})")
         if avg_latency > 3000:
-            anomaly_reasons.append(f"High avg latency: {avg_latency:.0f}ms")
-        if total_logs > 5000:
-            anomaly_reasons.append(f"Traffic spike: {total_logs} requests in 5s")
-        if not anomaly_reasons:
-            anomaly_reasons.append(f"Anomalous pattern detected (score: {score:.3f})")
+            reasons.append(f"Slow responses ({avg_latency:.0f}ms avg)")
+        if total > 5000:
+            reasons.append(f"Traffic spike ({total} reqs)")
+        if not reasons:
+            reasons.append("Unusual pattern detected by model")
 
     return WindowReport(
         window_id=window_id,
         window_time=now,
-        total_requests=total_logs,
+        total_requests=total,
         error_count=error_5xx,
         error_rate=round(error_rate, 4),
         avg_latency_ms=round(avg_latency, 1),
-        p99_latency_ms=round(p99_latency, 1),
-        max_latency_ms=max_latency,
+        p99_latency_ms=round(p99, 1),
         status=status_label,
         is_anomaly=is_anomaly,
-        confidence=round(confidence, 3),
-        anomaly_reasons=anomaly_reasons,
+        anomaly_reasons=reasons,
     )

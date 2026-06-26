@@ -1,100 +1,166 @@
 # AIOps RCA Engine
 
-An AI-powered Root Cause Analysis (RCA) engine for IT operations. This engine ingests raw server logs, processes them using machine learning to detect anomalies, and provides a real-time status report of your system's health.
+AI-powered Root Cause Analysis engine for IT operations. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
 
-## How It Works
+## Architecture
 
-1. **Log Ingestion:** Applications or simulators send logs to the FastAPI `/ingest` endpoint or directly to a Kafka topic (`raw-logs`).
-2. **Message Queue:** Kafka acts as a robust message broker, holding the logs for asynchronous processing and ensuring no data is lost during high traffic.
-3. **ML Processing:** A background consumer reads the logs from Kafka, processes them through an Analysis Engine using a pre-trained Machine Learning model, and identifies patterns or anomalies.
-4. **Status Reporting:** The analysis results are quickly stored in Redis. You can hit the `/status` endpoint to fetch the latest health report of the system.
+```
+Logs ──POST──▶ FastAPI /ingest ──▶ Kafka ──▶ ML Consumer ──▶ Redis
+                                                                │
+                              GET /status ◀─────────────────────┘
+```
+
+1. **Ingest** — Applications POST logs to `/ingest`. FastAPI hands them to Kafka instantly (HTTP 202).
+2. **Queue** — Kafka buffers logs for reliable async processing.
+3. **Analyze** — A background consumer reads logs in 5-second windows, runs them through the ML model, and detects anomalies.
+4. **Report** — Results are saved to Redis. Hit `/status` anytime for the latest health report.
 
 ## Project Structure
 
-```text
+```
 aiops_rca_engine/
 ├── app/
-│   ├── api.py               # FastAPI server for /ingest and /status endpoints
-│   ├── schemas.py           # Pydantic data models for API requests/responses
-│   ├── status_store.py      # Redis connection and operations for saving status
-│   └── utils.py             # Helper functions
+│   ├── api.py              # FastAPI server (/ingest + /status)
+│   ├── schemas.py          # Pydantic request/response models
+│   ├── status_store.py     # Redis read/write operations
+│   └── utils.py            # Log parsing utilities
 ├── ml/
-│   ├── analysis_engine.py   # Core ML analysis logic to identify anomalies
-│   ├── train_model.py       # Script to train/retrain the ML model
-│   └── model.pkl            # Pre-trained Scikit-Learn machine learning model
+│   ├── analysis_engine.py  # ML anomaly detection logic
+│   ├── train_model.py      # Model training script
+│   └── model.pkl           # Pre-trained Isolation Forest model
 ├── streaming/
-│   ├── kafka_consumer_ml.py # Background worker that reads Kafka & runs analysis
-│   └── kafka_producer.py    # Service to publish messages to Kafka
-├── scripts/
-│   └── simulate_traffic.py  # Script to simulate traffic and logs for testing
-├── Dockerfile               # Docker configuration for the application
-├── docker-compose.yml       # Setup for all services (Kafka, Redis, API, ML)
-├── requirements.txt         # Python dependencies
-└── README.md                # Project documentation
+│   └── kafka_consumer_ml.py  # Kafka consumer + ML pipeline
+├── Dockerfile
+├── docker-compose.yml      # All services with memory limits
+├── deploy.sh               # One-command EC2 deployment
+└── requirements.txt
 ```
 
 ## Tech Stack
 
-- **FastAPI**: High-performance backend web framework for log ingestion and status reporting endpoints.
-- **Apache Kafka & Zookeeper**: Distributed event streaming platform for handling high-throughput log data.
-- **Redis**: Fast, in-memory data store for caching the latest system status.
-- **Scikit-Learn**: Machine learning library used for the core anomaly detection model.
-- **Docker & Docker Compose**: Containerization and orchestration for easy, consistent setup and deployment.
+| Component | Technology |
+|-----------|-----------|
+| API | FastAPI + Uvicorn |
+| Message Queue | Apache Kafka + Zookeeper |
+| Cache | Redis |
+| ML Model | Scikit-Learn (Isolation Forest) |
+| Deployment | Docker Compose on AWS EC2 |
 
-## How to Run & Test
+---
 
-### 1. Start the Services
-
-Ensure you have Docker and Docker Compose installed. Run the following command in the project root to start all core services (API, Kafka, Zookeeper, Redis, and the ML Consumer):
+## Quick Start (Local)
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
-### 2. Check the Initial Status
-
-Once the containers are up and running, you can check the status endpoint. Initially, before any logs are processed, it might return a "WAITING" status.
-
+Check status:
 ```bash
 curl http://localhost:8000/status
 ```
 
-### 3. Simulate Traffic (Testing)
-
-To see the engine in action, use the built-in simulator to generate fake log traffic and send it to the API:
-
+Send test logs:
 ```bash
-docker-compose --profile simulator up -d
+curl -X POST http://localhost:8000/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"logs": ["127.0.0.1 - - [26/Jun/2026:10:00:00 +0000] \"GET /api HTTP/1.1\" 200 1024 \"http://example.com\" \"Mozilla/5.0\" 15"]}'
 ```
 
-*Alternatively, if you have Python installed locally with the required dependencies, you can run the simulator script directly:*
-```bash
-python simulate_traffic.py
-```
-
-### 4. View Results
-
-Wait a few moments after starting the simulator, then hit the `/status` endpoint again. You will see an updated response showing the total requests analyzed and the system's status (e.g., whether anomalies were detected).
-
+Check status again:
 ```bash
 curl http://localhost:8000/status
 ```
 
-**Example Output:**
-```json
-{
-  "window_id": 1,
-  "window_time": "2026-06-26 12:00:00",
-  "total_requests": 500,
-  "status": "ANOMALY_DETECTED",
-  "anomalies_count": 5
-}
-```
+API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## Stopping the Engine
+---
 
-To shut down and remove all running containers, simply run:
+## Deploy to AWS EC2
+
+### Prerequisites
+- An EC2 instance (Ubuntu, t2.micro or larger)
+- Security group with ports **8000**, **22** open
+- Your `.pem` key file
+
+### One-Command Deploy
 
 ```bash
-docker-compose down
+chmod +x deploy.sh
+./deploy.sh <EC2_PUBLIC_IP> <PATH_TO_PEM_FILE>
 ```
+
+Example:
+```bash
+./deploy.sh 54.123.45.67 ~/keys/my-key.pem
+```
+
+This will:
+1. Install Docker on the EC2 instance (if needed)
+2. Upload all project files
+3. Build and start all services
+4. Verify the deployment
+
+### Manual Deploy (Step by Step)
+
+```bash
+# 1. SSH into your EC2 instance
+ssh -i your-key.pem ubuntu@<EC2_IP>
+
+# 2. Install Docker
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2
+sudo usermod -aG docker ubuntu
+sudo systemctl enable docker && sudo systemctl start docker
+
+# 3. Upload project (from your local machine)
+scp -i your-key.pem -r app ml streaming requirements.txt Dockerfile docker-compose.yml ubuntu@<EC2_IP>:~/aiops_rca_engine/
+
+# 4. Start everything
+cd ~/aiops_rca_engine
+export EC2_PUBLIC_IP=<EC2_IP>
+sudo EC2_PUBLIC_IP=$EC2_PUBLIC_IP docker compose up -d --build
+
+# 5. Verify
+curl http://localhost:8000/status
+```
+
+### Memory Usage (t2.micro — 1 GB RAM)
+
+| Service | Memory Limit |
+|---------|-------------|
+| Zookeeper | 200 MB |
+| Kafka | 350 MB |
+| Redis | 50 MB |
+| API | 150 MB |
+| ML Consumer | 150 MB |
+| **Total** | **~900 MB** |
+
+### Useful Commands (on EC2)
+
+```bash
+# View all running containers
+sudo docker compose ps
+
+# Check memory usage
+sudo docker stats --no-stream
+
+# View logs
+sudo docker compose logs -f
+
+# Restart everything
+sudo docker compose restart
+
+# Stop everything
+sudo docker compose down
+```
+
+---
+
+## Retraining the Model
+
+If you have new `server.log` data:
+
+```bash
+python -m ml.train_model
+```
+
+This reads the first 10,000 lines of `server.log`, trains an Isolation Forest, and saves `model.pkl`.

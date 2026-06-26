@@ -1,41 +1,49 @@
-import numpy as np
+"""Train an Isolation Forest model on server logs for anomaly detection."""
+
+import logging
+
 import joblib
+import numpy as np
 from itertools import islice
 from sklearn.ensemble import IsolationForest
+
 from app.utils import parse_log_line
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-7s  %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("trainer")
+
+WINDOW_SIZE = 500  # logs per training window
 
 
 def train():
-    print("Reading logs for training...")
+    """Read server.log, extract features in windows, train and save model."""
+    log.info("Reading server.log for training data...")
 
-    # Read up to the first 10k lines safely (no crash if file is shorter)
     with open("server.log", "r") as f:
-        logs = list(islice(f, 10000))
+        lines = list(islice(f, 10_000))
 
-    if len(logs) < 100:
-        print(f"[WARN] Only {len(logs)} logs found. Need at least 100 for meaningful training.")
+    if len(lines) < 100:
+        log.error("Only %d logs found — need at least 100 for training", len(lines))
         return
 
-    print(f"Read {len(logs)} logs for training.")
+    log.info("Read %d log lines", len(lines))
 
-    # We will simulate grouping these logs into 5-second windows.
-    # Let's say we process 500 logs per window just to build training data.
-    window_size = 500
+    # Group logs into windows and extract feature vectors
     training_data = []
+    for i in range(0, len(lines), WINDOW_SIZE):
+        batch = lines[i : i + WINDOW_SIZE]
 
-    for i in range(0, len(logs), window_size):
-        batch = logs[i:i+window_size]
-        
-        total_logs = len(batch)
-        error_5xx = 0
-        error_4xx = 0
+        error_5xx, error_4xx = 0, 0
         latencies = []
 
         for line in batch:
             status, latency = parse_log_line(line)
             if status is None:
                 continue
-            
             if 500 <= status < 600:
                 error_5xx += 1
             elif 400 <= status < 500:
@@ -43,21 +51,19 @@ def train():
             latencies.append(latency)
 
         avg_latency = sum(latencies) / len(latencies) if latencies else 0
-        
-        # Feature Vector: [Volume, 5xx Count, 4xx Count, Avg Latency]
-        training_data.append([total_logs, error_5xx, error_4xx, avg_latency])
+
+        # Feature vector: [volume, 5xx_count, 4xx_count, avg_latency]
+        training_data.append([len(batch), error_5xx, error_4xx, avg_latency])
 
     X = np.array(training_data)
-    
-    print(f"Extracted {len(training_data)} training vectors. Training Isolation Forest...")
-    
-    # Train the model. contamination=0.05 means we assume 5% of training data might be anomalies
+    log.info("Extracted %d training vectors — training Isolation Forest...", len(X))
+
     model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
     model.fit(X)
-    
-    # Save the trained model
+
     joblib.dump(model, "model.pkl")
-    print("[OK] Model trained and saved as 'model.pkl'.")
+    log.info("Model saved as model.pkl")
+
 
 if __name__ == "__main__":
     train()

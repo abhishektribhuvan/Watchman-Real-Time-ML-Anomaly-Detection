@@ -1,41 +1,20 @@
-"""
-Shared utilities for the AIOps RCA Engine.
-Centralizes common parsing logic used across training, API, and Kafka pipelines.
-"""
+"""Shared log-parsing utilities for the AIOps RCA Engine."""
 
 import re
-from itertools import islice
+
+# Pre-compiled regex for performance — matches the extended common log format:
+#   IP - - [timestamp] "METHOD /path HTTP/1.x" STATUS BODY_SIZE "referer" "user-agent" LATENCY
+_LOG_PATTERN = re.compile(
+    r'HTTP/[\d.]+"\s+(\d{3})\s+\d+\s+"[^"]*"\s+"[^"]*"\s+(\d+)\s*$'
+)
 
 
-def parse_log_line(line: str):
+def parse_log_line(line: str) -> tuple[int | None, int | None]:
+    """Extract (status_code, latency_ms) from a raw log string.
+
+    Returns (None, None) if the line doesn't match the expected format.
     """
-    Extracts (status_code, latency_ms) from a raw log string.
-    
-    Actual log format (Extended Common Log Format):
-      IP - - [timestamp] "METHOD /path HTTP/1.x" STATUS BODY_SIZE "referer" "user-agent" LATENCY
-    
-    Example:
-      148.5.169.251 - - [...] "DELETE /usr/admin HTTP/1.0" 200 5044 "http://..." "Mozilla/..." 1409
-      -> returns (200, 1409)
-    
-    Returns (None, None) if the line doesn't match.
-    """
-    match = re.search(
-        r'HTTP/[\d.]+"\s+(\d{3})\s+\d+\s+"[^"]*"\s+"[^"]*"\s+(\d+)\s*$',
-        line.strip()
-    )
+    match = _LOG_PATTERN.search(line.strip())
     if match:
         return int(match.group(1)), int(match.group(2))
     return None, None
-
-
-def skip_lines(file_handle, count: int):
-    """
-    Safely skip `count` lines from an open file handle.
-    Returns the number of lines actually skipped (may be less than `count`
-    if the file has fewer lines).
-    """
-    skipped = 0
-    for _ in islice(file_handle, count):
-        skipped += 1
-    return skipped

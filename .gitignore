@@ -1,20 +1,18 @@
-# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized
 __pycache__/
 *.py[cod]
-*$py.class
 
-# IDE and Local tools
+# IDE and local tools
 .vscode/
 .agents/
-cmd.txt
 
-# Logs
-*.log
+# Logs (too large for git)
 server.log
+*.log
 
-# Machine Learning models and generated data
-*.pkl
+# Machine Learning model (deploy via scp/deploy.sh)
 ml/model.pkl
+*.pkl
 
 # Environment variables & virtual environments
 .env

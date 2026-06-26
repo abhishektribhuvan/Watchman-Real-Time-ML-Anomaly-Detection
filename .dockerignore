@@ -1,7 +1,9 @@
 server.log
-train_model.py
-simulate_traffic.py
-kafka_producer.py
+.git
+.gitignore
 .agents
 .vscode
 __pycache__
+*.pyc
+README.md
+deploy.sh
