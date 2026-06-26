@@ -3,7 +3,7 @@
 ML-powered Root Cause Analysis engine for server. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
 
 **Key Capabilities:**
-- **High Throughput:** Designed to handle traffic spikes of up to **500 logs per second** concurrently without dropping requests for current free tier servers , increasing the ram can handle 10x more requests per sec .   
+- **High Throughput:** Designed to handle traffic spikes of up to **500 logs per second** concurrently without dropping requests . this limit exist for current EC2 free tier server, increasing the ram can handle upto 10x more requests per sec .   
 - **Batch Ingestion:** The `/ingest` endpoint accepts payloads of up to **1,000 logs per batch**, reducing network overhead.
 - **Asynchronous Processing:** Uses Apache Kafka to decouple ingestion from machine learning analysis, ensuring the API consistently responds in under **20ms**.
 - **Anomaly Detection:** Utilizes Scikit-Learn's Isolation Forest to identify unusual traffic patterns based on error rates and latency in **5-second rolling windows**.
