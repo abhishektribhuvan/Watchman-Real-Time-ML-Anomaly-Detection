@@ -2,7 +2,7 @@ import numpy as np
 import joblib
 from itertools import islice
 from sklearn.ensemble import IsolationForest
-from utils import parse_log_line
+from app.utils import parse_log_line
 
 
 def train():

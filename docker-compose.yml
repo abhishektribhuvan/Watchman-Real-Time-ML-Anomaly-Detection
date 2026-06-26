@@ -46,7 +46,7 @@ services:
       - "6379:6379"
 
   api:
-    image: abhishektribhuvan8/aiops-engine:latest
+    build: .
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -69,9 +69,9 @@ services:
       start_period: 15s
 
   kafka-consumer:
-    image: abhishektribhuvan8/aiops-engine:latest
+    build: .
     restart: unless-stopped
-    command: ["python", "kafka_consumer_ml.py"]
+    command: ["python", "-m", "streaming.kafka_consumer_ml"]
     depends_on:
       kafka:
         condition: service_healthy
@@ -86,9 +86,9 @@ services:
       PYTHONUNBUFFERED: "1"
 
   kafka-producer:
-    image: abhishektribhuvan8/aiops-engine:latest
+    build: .
     restart: unless-stopped
-    command: ["python", "kafka_producer.py"]
+    command: ["python", "-m", "streaming.kafka_producer"]
     depends_on:
       kafka:
         condition: service_healthy
@@ -103,9 +103,9 @@ services:
       - direct-kafka
 
   simulator:
-    image: abhishektribhuvan8/aiops-engine:latest
+    build: .
     restart: unless-stopped
-    command: ["python", "simulate_traffic.py"]
+    command: ["python", "-m", "scripts.simulate_traffic"]
     depends_on:
       api:
         condition: service_healthy

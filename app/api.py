@@ -8,9 +8,8 @@ from fastapi import FastAPI, HTTPException
 from kafka import KafkaProducer
 from kafka.errors import KafkaError, NoBrokersAvailable
 
-from schemas import LogBatch, WindowReport
-from status_store import create_redis_client, load_latest_report
-
+from app.schemas import LogBatch, WindowReport
+from app.status_store import create_redis_client, load_latest_report
 KAFKA_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "raw-logs")
 KAFKA_BATCH_SIZE = int(os.environ.get("KAFKA_BATCH_SIZE", "500"))

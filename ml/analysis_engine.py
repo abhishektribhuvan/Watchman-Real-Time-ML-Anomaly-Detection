@@ -2,9 +2,8 @@ from datetime import datetime
 
 import numpy as np
 
-from schemas import WindowReport
-from utils import parse_log_line
-
+from app.schemas import WindowReport
+from app.utils import parse_log_line
 
 def analyze_window(logs_window: list[str], model, window_id: int) -> WindowReport:
     """Analyze one window of logs and return a status report."""

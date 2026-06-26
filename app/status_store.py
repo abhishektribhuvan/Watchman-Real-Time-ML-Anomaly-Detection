@@ -3,7 +3,7 @@ import time
 from redis import Redis
 from redis.exceptions import RedisError
 
-from schemas import WindowReport
+from app.schemas import WindowReport
 
 LATEST_REPORT_KEY = "aiops:latest_report"
 

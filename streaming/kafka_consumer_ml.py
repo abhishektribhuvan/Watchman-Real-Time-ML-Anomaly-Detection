@@ -6,9 +6,8 @@ import joblib
 from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 
-from analysis_engine import analyze_window
-from status_store import create_redis_client, save_latest_report
-
+from ml.analysis_engine import analyze_window
+from app.status_store import create_redis_client, save_latest_report
 KAFKA_SERVERS = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "raw-logs")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
