@@ -14,7 +14,7 @@ ML-powered Root Cause Analysis engine for server. Ingests server logs in real-ti
 
 You can test the engine locally or live on an AWS EC2 instance.
 
-**API Documentation (Swagger UI):** `http://51.21.244.122:8000/docs` *(Replace with localhost or your actual IP)*
+**API Documentation (Swagger UI):** `http://51.21.244.122:8000/docs` 
 
 ### How to test the ML Engine:
 1. Open the Live API Documentation link above in your browser.
@@ -42,9 +42,8 @@ You can test the engine locally or live on an AWS EC2 instance.
 ## Architecture
 
 ```
-Logs ──POST──▶ FastAPI /ingest ──▶ Kafka ──▶ ML Consumer ──▶ Redis
-                                                                │
-                              GET /status ◀─────────────────────┘
+Logs ──POST──▶ FastAPI /ingest ──▶ Kafka ──▶ ML Consumer ──▶ Redis ──▶ GET /status
+
 ```
 
 1. **Ingest** — Applications POST logs to `/ingest`. FastAPI hands them to Kafka instantly (HTTP 202).
