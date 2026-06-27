@@ -1,9 +1,9 @@
-# AIOps RCA Engine
+# Watchman: Real-Time ML Anomaly Detection
 
-ML-powered Root Cause Analysis engine for server. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
+ML-powered Root Cause Analysis engine for servers. Ingests server logs in real-time, detects anomalies using an Isolation Forest ML model, and reports system health via a REST API.
 
 **Key Capabilities:**
-- **High Throughput:** Designed to handle traffic spikes of up to **500 logs per second** concurrently without dropping requests . this limit exist for current EC2 free tier server, increasing the ram can handle upto 10x more requests per sec .   
+- **High Throughput:** Designed to handle traffic spikes of up to **500 logs per second** concurrently without dropping requests. This limit exists for the current EC2 free-tier server; increasing the RAM can handle up to 10x more requests per second.
 - **Batch Ingestion:** The `/ingest` endpoint accepts payloads of up to **1,000 logs per batch**, reducing network overhead.
 - **Asynchronous Processing:** Uses Apache Kafka to decouple ingestion from machine learning analysis, ensuring the API consistently responds in under **20ms**.
 - **Anomaly Detection:** Utilizes Scikit-Learn's Isolation Forest to identify unusual traffic patterns based on error rates and latency in **5-second rolling windows**.
@@ -118,37 +118,19 @@ API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Security group with ports **8000**, **22** open
 - Your `.pem` key file
 
-### One-Command Deploy
+### Deploy (Step by Step)
 
 ```bash
-chmod +x deploy.sh
-./deploy.sh <EC2_PUBLIC_IP> <PATH_TO_PEM_FILE>
-```
+# 1. Upload project to EC2
+scp -i your-key.pem -r app ml streaming requirements.txt Dockerfile docker-compose.yml ubuntu@<EC2_IP>:~/aiops_rca_engine/
 
-Example:
-```bash
-./deploy.sh 54.123.45.67 ~/keys/my-key.pem
-```
-
-This will:
-1. Install Docker on the EC2 instance (if needed)
-2. Upload all project files
-3. Build and start all services
-4. Verify the deployment
-
-### Manual Deploy (Step by Step)
-
-```bash
-# 1. SSH into your EC2 instance
+# 2. SSH into your EC2 instance
 ssh -i your-key.pem ubuntu@<EC2_IP>
 
-# 2. Install Docker
+# 3. Install Docker
 sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2
 sudo usermod -aG docker ubuntu
 sudo systemctl enable docker && sudo systemctl start docker
-
-# 3. Upload project (from your local machine)
-scp -i your-key.pem -r app ml streaming requirements.txt Dockerfile docker-compose.yml ubuntu@<EC2_IP>:~/aiops_rca_engine/
 
 # 4. Start everything
 cd ~/aiops_rca_engine
@@ -158,6 +140,7 @@ sudo EC2_PUBLIC_IP=$EC2_PUBLIC_IP docker compose up -d --build
 # 5. Verify
 curl http://localhost:8000/status
 ```
+
 
 ### Memory Usage (t2.micro — 1 GB RAM)
 
