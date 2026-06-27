@@ -1,26 +1,15 @@
-# Byte-compiled / optimized
 __pycache__/
 *.py[cod]
-
-# IDE and local tools
 .vscode/
 .agents/
-
-# Logs (too large for git)
 server.log
 *.log
 my-key.pem
 deploy.sh
-
-# Machine Learning model (deploy via scp/deploy.sh)
 ml/model.pkl
 *.pkl
-
-# Security / Secrets
 *.pem
 *.key
 .env
-
-# Virtual environments
 venv/
 env/

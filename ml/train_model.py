@@ -1,7 +1,4 @@
-"""Train an Isolation Forest model on server logs for anomaly detection."""
-
 import logging
-
 import joblib
 import numpy as np
 from itertools import islice
@@ -16,23 +13,15 @@ logging.basicConfig(
 )
 log = logging.getLogger("trainer")
 
-WINDOW_SIZE = 500  # logs per training window
-
+WINDOW_SIZE = 500
 
 def train():
-    """Read server.log, extract features in windows, train and save model."""
-    log.info("Reading server.log for training data...")
-
     with open("server.log", "r") as f:
         lines = list(islice(f, 10_000))
 
     if len(lines) < 100:
-        log.error("Only %d logs found — need at least 100 for training", len(lines))
         return
 
-    log.info("Read %d log lines", len(lines))
-
-    # Group logs into windows and extract feature vectors
     training_data = []
     for i in range(0, len(lines), WINDOW_SIZE):
         batch = lines[i : i + WINDOW_SIZE]
@@ -52,18 +41,14 @@ def train():
 
         avg_latency = sum(latencies) / len(latencies) if latencies else 0
 
-        # Feature vector: [volume, 5xx_count, 4xx_count, avg_latency]
         training_data.append([len(batch), error_5xx, error_4xx, avg_latency])
 
     X = np.array(training_data)
-    log.info("Extracted %d training vectors — training Isolation Forest...", len(X))
 
     model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
     model.fit(X)
 
     joblib.dump(model, "model.pkl")
-    log.info("Model saved as model.pkl")
-
 
 if __name__ == "__main__":
     train()

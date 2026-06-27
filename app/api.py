@@ -1,5 +1,3 @@
-"""FastAPI server — accepts logs via /ingest, reports status via /status."""
-
 import json
 import logging
 import os
@@ -16,21 +14,17 @@ from app.status_store import create_redis_client, load_report
 
 log = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration (all overridable via environment variables)
-# ---------------------------------------------------------------------------
+# config
 KAFKA_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "raw-logs")
 KAFKA_BATCH_SIZE = int(os.environ.get("KAFKA_BATCH_SIZE", "500"))
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
-# Global handles (initialized on startup, cleaned on shutdown)
 producer = None
 redis_client = None
 
 
 def _create_producer(retries: int = 10, delay: int = 3) -> KafkaProducer:
-    """Create a reusable Kafka producer with retry logic."""
     for attempt in range(1, retries + 1):
         try:
             kp = KafkaProducer(
@@ -51,13 +45,9 @@ def _create_producer(retries: int = 10, delay: int = 3) -> KafkaProducer:
 
 
 def _chunk(items: list, size: int) -> list[list]:
-    """Split a list into chunks of the given size."""
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
-# ---------------------------------------------------------------------------
-# App lifecycle
-# ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global producer, redis_client
@@ -74,12 +64,8 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="AIOps RCA Engine", lifespan=lifespan)
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 @app.post("/ingest", status_code=202)
 async def ingest_logs(batch: LogBatch):
-    """Accept logs and hand them to Kafka for async ML processing."""
     if producer is None:
         raise HTTPException(503, detail="Kafka producer not ready")
 
@@ -101,7 +87,6 @@ async def ingest_logs(batch: LogBatch):
 
 @app.get("/status", response_model=WindowReport)
 async def get_status():
-    """Return the latest analysis window produced by the ML consumer."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if redis_client is None:
