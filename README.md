@@ -14,7 +14,7 @@ ML-powered Root Cause Analysis engine for server. Ingests server logs in real-ti
 
 You can test the engine locally or live on an AWS EC2 instance.
 
-**API Documentation (Swagger UI):** `http://51.21.244.122:8000/docs` 
+**API Documentation (Swagger UI):** http://51.21.244.122:8000/docs 
 
 ### How to test the ML Engine:
 1. Open the Live API Documentation link above in your browser.
